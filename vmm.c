@@ -38,6 +38,7 @@ typedef struct {
 
 int fifo(int8_t** page_table, int num_pages, int prev_page, int fifoVar, int num_frames, int clock) {
 	int page;
+	// Pega a última posição do vetor (primeira da fila) que indica a página a ser trocada
 	page = fifoVar;
 	
 	return page;
@@ -100,9 +101,11 @@ int simulate(int8_t **page_table, int num_pages, int *prev_page, int *fifoVar,
 	
         next_frame_addr = find_next_frame(physical_memory, num_free_frames, num_frames, prev_free);
 		
+		// Caso a fila FIFO esteja vazia a primeira página trazida para a memória é inserida na fila
 		if (fifoVar[num_frames - 1] == -1) {
             fifoVar[num_frames - 1] = virt_addr;
 		}
+		// Caso a fila FIFO não esteja vazia a página é inserida na próxima posição vaga
 		else{
 			fifoVar[*num_free_frames - 1] = virt_addr;
 		}
@@ -249,10 +252,12 @@ int main(int argc, char **argv) {
     int num_free_frames = num_frames;
     int prev_free = -1;
     int prev_page = -1;
+	
+	// É criado um vetor int para simular uma fila que armazenará os índices das páginas a serem trocadas
 	int *fifoVar;
 	fifoVar = (int*) malloc(num_frames * sizeof(int));
 	for (int i = 0; i < num_frames; i++) {
-        fifoVar[i] = -1;
+        fifoVar[i] = -1; // É dado -1 a todas as posições do vetor, indicando que estão vazias
     }
 	
 	// Roda o simulador
