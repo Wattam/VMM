@@ -32,24 +32,14 @@ typedef struct {
 // - A tabela de páginas
 // - O tamanho da mesma
 // - A última página acessada
-// - A primeira modura acessada (para fifoVar)
+// - A primeira página a ser trazida para a memória
 // - O número de molduras
 // - Se a última instrução gerou um ciclo de clock
-//
-// Adicione mais parâmetros caso ache necessário
 
 int fifo(int8_t** page_table, int num_pages, int prev_page, int fifoVar, int num_frames, int clock) {
-	
-	//printf("\nTESTE FIFO\n");
-	//for (int i = 0; i < num_frames; i++) {
-	//	printf("Posicao [%d] = %d\n", i, fifoVar[i]);
-    //}
-	//printf("\n");
-	
-    int page;
+	int page;
 	page = fifoVar;
 	
-	printf("\nPAGINA A SER REMOVIDA: %d\n", fifoVar);
 	return page;
 }
 
@@ -95,19 +85,13 @@ int simulate(int8_t **page_table, int num_pages, int *prev_page, int *fifoVar,
              int *prev_free, int virt_addr, char access_type,
              eviction_f evict, int clock) {
 				 
-	//printf("\nTESTE SIMULATE\n");
-	//for (int i = 0; i < num_frames; i++) {
-    //    printf("Posicao [%d] = %d\n", i, fifoVar[i]);
-    //}
-	//printf("\n");
-	
-    if (virt_addr >= num_pages || virt_addr < 0) {
+	if (virt_addr >= num_pages || virt_addr < 0) {
         printf("Invalid access \n");
         exit(1);
     }
 
     if (page_table[virt_addr][PT_MAPPED] == 1) {
-        page_table[virt_addr][PT_REFERENCE_BIT] = 1;
+		page_table[virt_addr][PT_REFERENCE_BIT] = 1;
         return 0; // Not Page Fault!
     }
 
@@ -118,7 +102,6 @@ int simulate(int8_t **page_table, int num_pages, int *prev_page, int *fifoVar,
 		
 		if (fifoVar[num_frames - 1] == -1) {
             fifoVar[num_frames - 1] = virt_addr;
-			//*fifoVar = next_frame_addr;
 		}
 		else{
 			fifoVar[*num_free_frames - 1] = virt_addr;
@@ -135,7 +118,7 @@ int simulate(int8_t **page_table, int num_pages, int *prev_page, int *fifoVar,
 
         next_frame_addr = page_table[to_free][PT_FRAMEID];
         
-		// REALOCANDO O VETOR DO fifoVar
+		// Reajustando as posições do vetor vivoVar
 		int i = num_pages-1;
 		for(i = num_pages-1; i >= 0; i--){
 			if(i>0){
@@ -146,10 +129,7 @@ int simulate(int8_t **page_table, int num_pages, int *prev_page, int *fifoVar,
 			}
 		}
 		
-		//*fifoVar = virt_addr;
-		//*fifoVar = (*fifoVar + 1) % num_frames;
-		
-        // Libera pagina antiga
+		// Libera pagina antiga
 		page_table[to_free][PT_FRAMEID] = -1;
         page_table[to_free][PT_MAPPED] = 0;
         page_table[to_free][PT_DIRTY] = 0;
@@ -181,13 +161,7 @@ void run(int8_t **page_table, int num_pages, int *prev_page, int *fifoVar,
          int *physical_memory, int *num_free_frames, int num_frames,
          int *prev_free, eviction_f evict, int clock_freq) {
 			 
-	//printf("\nTESTE RUN\n");
-	//for (int i = 0; i < num_frames; i++) {
-    //    printf("Posicao [%d] = %d\n", i, fifoVar[i]);
-    //}
-	//printf("\n");
-			 
-    int virt_addr;
+	int virt_addr;
     char access_type;
     int i = 0;
     int clock = 0;
@@ -202,7 +176,7 @@ void run(int8_t **page_table, int num_pages, int *prev_page, int *fifoVar,
                            virt_addr, access_type, evict, clock);
         i++;
     }
-    printf("Faults: %d\n", faults);
+    printf("\nFaults: %d\n", faults);
 }
 
 int parse(char *opt) {
@@ -281,17 +255,10 @@ int main(int argc, char **argv) {
         fifoVar[i] = -1;
     }
 	
-	//printf("\nTESTE MAIN\n");
-	//for (int i = 0; i < num_frames; i++) {
-    //    printf("Posicao [%d] = %d\n", i, fifoVar[i]);
-    //}
-	//printf("\n");
-
-    // Roda o simulador
+	// Roda o simulador
     srand(time(NULL));
 	run(page_table, num_pages, &prev_page, fifoVar, physical_memory,
         &num_free_frames, num_frames, &prev_free, evict, clock_freq);
-    //run(page_table, num_pages, &prev_page, &fifoVar, physical_memory, &num_free_frames, num_frames, &prev_free, evict, clock_freq);
 
     // Liberando os mallocs
     for (int i = 0; i < num_pages; i++) {
