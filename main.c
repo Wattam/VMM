@@ -32,32 +32,40 @@ typedef struct {
 // - A tabela de páginas
 // - O tamanho da mesma
 // - A última página acessada
-// - A primeira modura acessada (para fifo)
+// - A primeira modura acessada (para fifoVar)
 // - O número de molduras
 // - Se a última instrução gerou um ciclo de clock
 //
 // Adicione mais parâmetros caso ache necessário
 
-int fifo(int8_t** page_table, int num_pages, int prev_page, int fifo_frm, int num_frames, int clock) {
-    int page = fifo_frm;
+int fifo(int8_t** page_table, int num_pages, int prev_page, int fifoVar, int num_frames, int clock) {
 	
-	printf("\nPAGINA A SER REMOVIDA: %d\n", fifo_frm);
+	//printf("\nTESTE FIFO\n");
+	//for (int i = 0; i < num_frames; i++) {
+	//	printf("Posicao [%d] = %d\n", i, fifoVar[i]);
+    //}
+	//printf("\n");
+	
+    int page;
+	page = fifoVar;
+	
+	printf("\nPAGINA A SER REMOVIDA: %d\n", fifoVar);
 	return page;
 }
 
-int second_chance(int8_t** page_table, int num_pages, int prev_page, int fifo_frm, int num_frames, int clock) {
+int second_chance(int8_t** page_table, int num_pages, int prev_page, int fifoVar, int num_frames, int clock) {
     return -1;
 }
 
-int nru(int8_t** page_table, int num_pages, int prev_page, int fifo_frm, int num_frames, int clock) {
+int nru(int8_t** page_table, int num_pages, int prev_page, int fifoVar, int num_frames, int clock) {
     return -1;
 }
 
-int aging(int8_t** page_table, int num_pages, int prev_page, int fifo_frm, int num_frames, int clock) {
+int aging(int8_t** page_table, int num_pages, int prev_page, int fifoVar, int num_frames, int clock) {
     return -1;
 }
 
-int random_page(int8_t** page_table, int num_pages, int prev_page, int fifo_frm, int num_frames, int clock) {
+int random_page(int8_t** page_table, int num_pages, int prev_page, int fifoVar, int num_frames, int clock) {
     int page = rand() % num_pages;
     while (page_table[page][PT_MAPPED] == 0){ // Encontra página mapeada
         page = rand() % num_pages;
@@ -82,10 +90,17 @@ int find_next_frame(int *physical_memory, int *num_free_frames, int num_frames, 
     return *prev_free;
 }
 
-int simulate(int8_t **page_table, int num_pages, int *prev_page, int *fifo_frm,
+int simulate(int8_t **page_table, int num_pages, int *prev_page, int *fifoVar,
              int *physical_memory, int *num_free_frames, int num_frames,
              int *prev_free, int virt_addr, char access_type,
              eviction_f evict, int clock) {
+				 
+	//printf("\nTESTE SIMULATE\n");
+	//for (int i = 0; i < num_frames; i++) {
+    //    printf("Posicao [%d] = %d\n", i, fifoVar[i]);
+    //}
+	//printf("\n");
+	
     if (virt_addr >= num_pages || virt_addr < 0) {
         printf("Invalid access \n");
         exit(1);
@@ -101,24 +116,38 @@ int simulate(int8_t **page_table, int num_pages, int *prev_page, int *fifo_frm,
 	
         next_frame_addr = find_next_frame(physical_memory, num_free_frames, num_frames, prev_free);
 		
-		if (*fifo_frm == -1) {
-            *fifo_frm = virt_addr;
-			//*fifo_frm = next_frame_addr;
+		if (fifoVar[num_frames - 1] == -1) {
+            fifoVar[num_frames - 1] = virt_addr;
+			//*fifoVar = next_frame_addr;
+		}
+		else{
+			fifoVar[*num_free_frames - 1] = virt_addr;
 		}
         *num_free_frames = *num_free_frames - 1;
     } else { // Precisamos liberar a memória!
 	
 		assert(*num_free_frames == 0);
-        int to_free = evict(page_table, num_pages, *prev_page, *fifo_frm,
-                            num_frames, clock);
+        int to_free; 
+		to_free = evict(page_table, num_pages, *prev_page, fifoVar[num_frames - 1], num_frames, clock);
         assert(to_free >= 0);
         assert(to_free < num_pages);
         assert(page_table[to_free][PT_MAPPED] != 0);
 
         next_frame_addr = page_table[to_free][PT_FRAMEID];
         
-		//*fifo_frm = virt_addr;
-		//*fifo_frm = (*fifo_frm + 1) % num_frames;
+		// REALOCANDO O VETOR DO fifoVar
+		int i = num_pages-1;
+		for(i = num_pages-1; i >= 0; i--){
+			if(i>0){
+				fifoVar[i] = fifoVar[i - 1];
+			}
+			else{
+				fifoVar[i] = virt_addr;
+			}
+		}
+		
+		//*fifoVar = virt_addr;
+		//*fifoVar = (*fifoVar + 1) % num_frames;
 		
         // Libera pagina antiga
 		page_table[to_free][PT_FRAMEID] = -1;
@@ -148,12 +177,16 @@ int simulate(int8_t **page_table, int num_pages, int *prev_page, int *fifo_frm,
     return 1; // Page Fault!
 }
 
-void run(int8_t **page_table, int num_pages, int *prev_page, int *fifo_frm,
+void run(int8_t **page_table, int num_pages, int *prev_page, int *fifoVar,
          int *physical_memory, int *num_free_frames, int num_frames,
          int *prev_free, eviction_f evict, int clock_freq) {
-//void run(int8_t **page_table, int num_pages, int *prev_page, int *fifo_frm,
-//         int *physical_memory, int *num_free_frames, int num_frames,
-//         int *prev_free, eviction_f evict, int clock_freq) {
+			 
+	//printf("\nTESTE RUN\n");
+	//for (int i = 0; i < num_frames; i++) {
+    //    printf("Posicao [%d] = %d\n", i, fifoVar[i]);
+    //}
+	//printf("\n");
+			 
     int virt_addr;
     char access_type;
     int i = 0;
@@ -164,7 +197,7 @@ void run(int8_t **page_table, int num_pages, int *prev_page, int *fifo_frm,
         getchar();
         scanf("%c", &access_type);
         clock = ((i+1) % clock_freq) == 0;
-        faults += simulate(page_table, num_pages, prev_page, fifo_frm,
+        faults += simulate(page_table, num_pages, prev_page, fifoVar,
                            physical_memory, num_free_frames, num_frames, prev_free,
                            virt_addr, access_type, evict, clock);
         i++;
@@ -242,15 +275,23 @@ int main(int argc, char **argv) {
     int num_free_frames = num_frames;
     int prev_free = -1;
     int prev_page = -1;
-	int fifo_frm[num_frames];
-    int fifo_frm[0] = -1;
+	int *fifoVar;
+	fifoVar = (int*) malloc(num_frames * sizeof(int));
+	for (int i = 0; i < num_frames; i++) {
+        fifoVar[i] = -1;
+    }
 	
+	//printf("\nTESTE MAIN\n");
+	//for (int i = 0; i < num_frames; i++) {
+    //    printf("Posicao [%d] = %d\n", i, fifoVar[i]);
+    //}
+	//printf("\n");
 
     // Roda o simulador
     srand(time(NULL));
-	run(page_table, num_pages, &prev_page, fifo_frm, physical_memory,
+	run(page_table, num_pages, &prev_page, fifoVar, physical_memory,
         &num_free_frames, num_frames, &prev_free, evict, clock_freq);
-    //run(page_table, num_pages, &prev_page, &fifo_frm, physical_memory, &num_free_frames, num_frames, &prev_free, evict, clock_freq);
+    //run(page_table, num_pages, &prev_page, &fifoVar, physical_memory, &num_free_frames, num_frames, &prev_free, evict, clock_freq);
 
     // Liberando os mallocs
     for (int i = 0; i < num_pages; i++) {
@@ -258,4 +299,5 @@ int main(int argc, char **argv) {
     }
     free(page_table);
     free(physical_memory);
+	free(fifoVar);
 }
